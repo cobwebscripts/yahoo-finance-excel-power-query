@@ -1,15 +1,15 @@
 # README
 
 ## AUTHOR CONTACT INFORMATION
-Please go to [cobwebscripts.com](cobwebscripts.com) to find up to date social media links to contact me.
+Please go to [cobwebscripts.com](http://cobwebscripts.com) to find up to date social media links to contact me.
 
 ## WHAT IS IN THIS REPOSITORY
 - Yahoo Finance Power Query.xlsx
-  - The actual Excel file you can use right away. Follow the [steps listed](#how-to) to start generating queries.
+  - The actual Excel file you can use right away. Follow the [steps listed](#how-to-use-this-file) to start generating queries.
 - Yahoo Finance Power Query Script.txt
   - The text of the Power Query script used. This can be accessed within the Excel file as well.
 
-## <a name="how-to">HOW TO USE THIS FILE</a>
+## HOW TO USE THIS FILE
 0. Have a version of Excel have has Power Query.
 1. [Download Yahoo Finance Power Query.xlsx.](https://github.com/cobwebscripts/yahoo-finance-excel-power-query/raw/04c5dee020cc93d71d7cea7f31527d1d45dbdcad/Yahoo%20Finance%20Power%20Query.xlsx)
 2. Open Yahoo Finance Power Query.xlsx.
