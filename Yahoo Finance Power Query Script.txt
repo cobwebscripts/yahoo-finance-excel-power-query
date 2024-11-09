@@ -1,0 +1,140 @@
+/*
+    PowerQuery to pull data from Yahoo Finance into Excel.
+
+    Written by: cobwebscripts with assistance from ChatGPT.
+
+    If you want to contact me go to cobwebscripts.com and 
+    use one of the social media links I listed.
+    They will be on some sort of "About" or "Contact Me" page.
+
+*/
+
+let
+
+    // Parameters
+    ticker = Ticker,
+    timeResolution = Resolution,
+
+    // API URL build and query
+    FullURL = "https://query1.finance.yahoo.com/v8/finance/chart/"
+        & ticker 
+        & "?range=1000y&interval=" 
+        & timeResolution 
+        & "&includePrePost=true&events=div%7Csplit%7Cearn",
+    stockJson = Json.Document(Web.Contents(FullURL)),
+
+    // General format for:
+    // high, low, close, volume
+    // JavaScript version below:
+    //stockJson.chart.result[0].indicators.quote[0].[DESIRED DATA POINT];
+    chart = stockJson[chart],
+    result = chart[result],
+    result1 = result{0},
+    indicators = result1[indicators],
+    quote = indicators[quote],
+    quote1 = quote{0},
+
+    // Adjusted Close is on a separate branch
+    adjclose = indicators[adjclose],
+    adjclose1 = adjclose{0},
+
+
+    // Stock prices and volume data isolation and build into table
+    // Final data points
+    timestamp = result1[timestamp],
+    high = quote1[high],
+    low = quote1[low],
+    close = quote1[close],
+    adjclose2 = adjclose1[adjclose],
+    volume = quote1[volume],    
+
+    outputTable = Table.FromColumns(
+        {timestamp, high, low, close, adjclose2, volume}, 
+        {"Timestamp", "High", "Low", "Close", "Adjusted Close", "Volume"}),  
+
+    // Dividends section
+    //
+    // Dividends is not like the other data. 
+    // It comes has a bunch of key-value pairs. 
+    // The key being the timestamp and the value being 2 more key-value pairs.
+    // <NUMBER IN SECONDS SINCE EPOCH, 2 more key-value pairs>
+    // The 2 more key-value pairs are:
+    // <"date", NUMBER IN SECONDS SINCE EPOCH>
+    // <"amount", FLOATING POINT NUMBER OF DIV PER SHARE>
+    // So we have to find a way to iterate and flatten this data
+    //
+    // JavaScript path for data:
+    // stockJson.chart.result[0].events.dividends
+
+    // Test to see if this stock even has dividends to store
+    dividends = try Record.ToList(result1[events][dividends]) otherwise {},
+
+    // Check if dividends exist and create a table
+    DividendsTable = if List.IsEmpty(dividends) then
+                        // If no dividends data exists, return an empty table
+                        Table.FromRecords({})
+                     else
+                        let
+                            // If dividends exist, convert the list to a table
+                            DividendsTableCreate = Table.FromList(dividends, 
+                                            Splitter.SplitByNothing(), 
+                                            {"Dividend Data"}, 
+                                            null, ExtraValues.Error),
+                            // Need to expand the 2 key-value pairs into columns (date and amount)
+                            DividendsTableExpand = Table.ExpandRecordColumn(DividendsTableCreate, 
+                                                                            "Dividend Data", 
+                                                                            {"date", "amount"}),
+                            // Rename the columns
+                            DividendsTableRename = Table.RenameColumns(DividendsTableExpand,
+                                                {
+                                                    {"date", "Dividend Timestamp"},
+                                                    {"amount", "Dividend Amount"}
+                                                },
+                                                MissingField.Ignore)
+                        in
+                            DividendsTableRename,
+
+    // Stock split section
+    //
+    // Copy the same process as dividends
+    // Technically splits has like 4 sub key-value pairs in comparison
+    // to the 2 that dividends has, but the process is the exact same.
+    // Also we only need 2 of the 4 anyway.
+    splits = try Record.ToList(result1[events][splits]) otherwise {},
+
+    SplitsTable = if List.IsEmpty(splits) then
+                        // If no splits data exists, return an empty table
+                        Table.FromRecords({})
+                     else
+                        let
+                            // If splits exist, convert the list to a table
+                            SplitsTableCreate = Table.FromList(splits, 
+                                            Splitter.SplitByNothing(), 
+                                            {"Split Data"}, 
+                                            null, ExtraValues.Error),
+                            // Need to expand the 2 key-value pairs into columns (date and amount)
+                            SplitsTableExpand = Table.ExpandRecordColumn(SplitsTableCreate, 
+                                                                            "Split Data", 
+                                                                            {"date", "splitRatio"}),
+                            // Rename the columns
+                            SplitsTableRename = Table.RenameColumns(SplitsTableExpand,
+                                                {
+                                                    {"date", "Splits Timestamp"},
+                                                    {"splitRatio", "Splits Ratio"}
+                                                },
+                                                MissingField.Ignore)
+                        in
+                            SplitsTableRename,
+     
+    outputTable2 = if Table.IsEmpty(DividendsTable) then
+                        outputTable
+                    else
+                        Table.Join(outputTable, {"Timestamp"}, DividendsTable, {"Dividend Timestamp"}, JoinKind.FullOuter),
+
+    outputTable3 = if Table.IsEmpty(SplitsTable) then
+                        outputTable2
+                    else
+                        Table.Join(outputTable2, {"Timestamp"}, SplitsTable, {"Splits Timestamp"}, JoinKind.FullOuter)
+
+in
+    outputTable3
