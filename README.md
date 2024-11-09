@@ -1,7 +1,7 @@
 # README
 
 ## AUTHOR CONTACT INFORMATION
-Please go to cobwebscripts.com to find up to date social media links to contact me.
+Please go to [cobwebscripts.com](cobwebscripts.com) to find up to date social media links to contact me.
 
 ## WHAT IS IN THIS REPOSITORY
 - Yahoo Finance Power Query.xlsx
